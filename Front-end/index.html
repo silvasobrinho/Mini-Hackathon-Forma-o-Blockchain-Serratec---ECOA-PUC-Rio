@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Doações - Smart Contract</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+
+
+
+    <style>
+
+        body {
+
+            font-family: Arial;
+
+            margin: 40px;
+
+            background: #f5f5f5;
+
+        }
+
+        .box {
+
+            background: white;
+
+            padding: 20px;
+
+            margin-bottom: 20px;
+
+            border-radius: 8px;
+
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+
+        }
+
+        input, button {
+
+            padding: 8px;
+
+            margin-top: 8px;
+
+        }
+
+        button {
+
+            cursor: pointer;
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+
+
+    <h1>💰 Sistema de Doações - Web3</h1>
+
+
+
+    <div class="box">
+
+        <h2>1. Conectar Carteira</h2>
+
+        <button onclick="connectWallet()">Conectar MetaMask</button>
+
+        <p><b>Conta conectada:</b> <span id="account"></span></p>
+
+    </div>
+
+
+
+    <div class="box">
+
+        <h2>2. Fazer Doação</h2>
+
+        <input type="number" id="donationAmount" placeholder="Valor em ETH" />
+
+        <button onclick="donate()">Doar</button>
+
+    </div>
+
+
+
+    <div class="box">
+
+        <h2>3. Consultar Doações</h2>
+
+        <button onclick="getMyDonations()">Ver quanto eu já doei</button>
+
+        <p><b>Você doou:</b> <span id="myDonations">0</span> ETH</p>
+
+
+
+        <button onclick="getTotal()">Ver total arrecadado</button>
+
+        <p><b>Total arrecadado:</b> <span id="totalDonations">0</span> ETH</p>
+
+    </div>
+
+
+
+    <div class="box">
+
+        <h2>4. Sacar Fundos (Somente Beneficiário)</h2>
+
+        <button onclick="withdraw()">Sacar tudo</button>
+
+        <p id="withdrawStatus"></p>
+
+    </div>
+
+
+
+    <script>
+
+        let web3;
+
+        let contract;
+
+        let userAccount;
+
+
+
+        // 👉 Cole aqui o ABI do contrato
+
+        const contractABI = [
+
+            {
+
+                "inputs":[{"internalType":"address","name":"_beneficiary","type":"address"}],
+
+                "stateMutability":"nonpayable",
+
+                "type":"constructor"
+
+            },
+
+            {
+
+                "anonymous":false,
+
+                "inputs":[{"indexed":true,"internalType":"address","name":"donor","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],
+
+                "name":"DonationReceived",
+
+                "type":"event"
+
+            },
+
+            {
+
+                "anonymous":false,
+
+                "inputs":[{"indexed":true,"internalType":"address","name":"beneficiary","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],
+
+                "name":"FundsWithdrawn",
+
+                "type":"event"
+
+            },
+
+            {
+
+                "inputs":[],
+
+                "name":"beneficiary",
+
+                "outputs":[{"internalType":"address","name":"","type":"address"}],
+
+                "stateMutability":"view",
+
+                "type":"function"
+
+            },
+
+            {
+
+                "inputs":[],
+
+                "name":"donate",
+
+                "outputs":[],
+
+                "stateMutability":"payable",
+
+                "type":"function"
+
+            },
+
+            {
+
+                "inputs":[{"internalType":"address","name":"user","type":"address"}],
+
+                "name":"getDonationOf",
+
+                "outputs":[{"internalType":"uint256","name":"","type":"uint256"}],
+
+                "stateMutability":"view",
+
+                "type":"function"
+
+            },
+
+            {
+
+                "inputs":[],
+
+                "name":"totalReceived",
+
+                "outputs":[{"internalType":"uint256","name":"","type":"uint256"}],
+
+                "stateMutability":"view",
+
+                "type":"function"
+
+            },
+
+            {
+
+                "inputs":[],
+
+                "name":"withdraw",
+
+                "outputs":[],
+
+                "stateMutability":"nonpayable",
+
+                "type":"function"
+
+            }
+
+        ];
+
+
+
+        // 👉 Cole aqui o endereço do contrato após o deploy no Remix
+
+        const contractAddress = "COLE_AQUI_O_ENDERECO_DO_CONTRATO";
+
+
+
+        // --------------------------
+
+        // 1. Conectar MetaMask
+
+        // --------------------------
+
+        async function connectWallet() {
+
+            if (window.ethereum) {
+
+                web3 = new Web3(window.ethereum);
+
+                const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+
+                userAccount = accounts[0];
+
+                document.getElementById("account").innerText = userAccount;
+
+
+
+                contract = new web3.eth.Contract(contractABI, contractAddress);
+
+            } else {
+
+                alert("Instale o MetaMask para continuar.");
+
+            }
+
+        }
+
+
+
+        // --------------------------
+
+        // 2. Doar ETH
+
+        // --------------------------
+
+        async function donate() {
+
+            const ethAmount = document.getElementById("donationAmount").value;
+
+            if (!ethAmount) return alert("Digite um valor.");
+
+
+
+            const valueInWei = web3.utils.toWei(ethAmount, "ether");
+
+
+
+            await contract.methods.donate().send({
+
+                from: userAccount,
+
+                value: valueInWei
+
+            });
+
+
+
+            alert("Doação enviada com sucesso!");
+
+        }
+
+
+
+        // --------------------------
+
+        // 3. Ver quanto o usuário já doou
+
+        // --------------------------
+
+        async function getMyDonations() {
+
+            const donatedWei = await contract.methods.getDonationOf(userAccount).call();
+
+            const donatedEth = web3.utils.fromWei(donatedWei, "ether");
+
+            document.getElementById("myDonations").innerText = donatedEth;
+
+        }
+
+
+
+        // --------------------------
+
+        // 3b. Ver total arrecadado
+
+        // --------------------------
+
+        async function getTotal() {
+
+            const totalWei = await contract.methods.totalReceived().call();
+
+            const totalEth = web3.utils.fromWei(totalWei, "ether");
+
+            document.getElementById("totalDonations").innerText = totalEth;
+
+        }
+
+
+
+        // --------------------------
+
+        // 4. Sacar fundos (beneficiário)
+
+        // --------------------------
+
+        async function withdraw() {
+
+            try {
+
+                await contract.methods.withdraw().send({ from: userAccount });
+
+                document.getElementById("withdrawStatus").innerText = "Saque realizado!";
+
+            } catch (e) {
+
+                document.getElementById("withdrawStatus").innerText = "Erro ao sacar (verifique se você é o beneficiário).";
+
+            }
+
+        }
+
+    </script>
+
+
+
+</body>
+
+</html>
