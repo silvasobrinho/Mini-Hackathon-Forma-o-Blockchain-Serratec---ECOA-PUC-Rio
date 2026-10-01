@@ -11,7 +11,7 @@ Este projeto é um DApp (Decentralized Application) desenvolvido durante o Hacka
 * Adriana Franco Marins
 * Giovane da Silva Sobrinho
 * José Augusto dos Santos Junior
-* Paulo Junior
+* Paulo Roberto Silva de Oliveira Junior
 * Rafael Vieira Camara
 
 ---
